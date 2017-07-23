@@ -1,0 +1,102 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+
+//crates
+extern crate inotify;
+extern crate serde;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
+
+//imports
+use core::{
+    read_file,
+    ConfigFile,
+    Database,
+};
+use inotify::{
+    event_mask,
+    watch_mask,
+    Inotify,
+};
+use serde_json::{Value, Error};
+use std::path::Path;
+use std::collections::HashMap;
+use std::io;
+//use std::result;
+
+//consts
+const SETTINGS : &str = "/var/lib/configger/settings.json"; //hardcoded?
+
+mod core;
+
+#[derive(Serialize, Deserialize)]
+struct SettingsData {
+    version: String,
+    database: String,
+}
+
+impl SettingsData  {
+    fn from_file(filename: &str) -> Result<SettingsData, io::Error> {
+        
+        let settings_file: String = read_file(filename)?;
+
+        let settings: SettingsData = serde_json::from_str(&settings_file)?;
+
+        Ok(settings)
+
+    }
+}
+
+fn main() {
+
+    //begin bootstrap
+
+    let settings = SettingsData::from_file(SETTINGS).unwrap();
+
+    let database = Database::initialize(&settings.database)
+        .expect("Error creating database struct");
+
+    let cfgfiles: Vec<ConfigFile> = serde_json::from_str(&database.data)
+        .expect("Error de-serializing configuration files data.");
+    
+    let cfgfiles_iterator = cfgfiles.iter();
+    
+    let mut inotifier = Inotify::init()
+        .expect("Failed to init inotify.");
+
+    let mut watches = HashMap::new();
+
+    for file in cfgfiles_iterator {
+
+        watches.insert(&file.filepath, inotifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE)
+            .expect("Failed to add watch."));
+    }
+
+    //for (filepath, watch) in watches {
+    //    inotifier.rm_watch(watch);
+    //}
+
+    let mut buffer = [0u8; 4096];
+
+    loop {
+        let events = inotifier.read_events_blocking(&mut buffer)
+            .expect("Failed to read events.");
+
+            for event in events {
+                println!("{:?}", event);
+            }
+    }
+
+    //let j = serde_json::to_string(&cfgfiles)
+    //    .expect("Failed to serialize j");
+
+    //ser-de works for us rn
+
+    //inotify works TODO: change MODIFY to WRITE_CLOSE or equiv
+
+
+    
+}
