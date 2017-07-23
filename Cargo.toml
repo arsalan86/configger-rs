@@ -1,5 +1,5 @@
 [package]
-name = "tracker"
+name = "configger"
 version = "0.1.0"
 authors = ["arsalan86 <public@arsalanpirzada.com>"]
 
