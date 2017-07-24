@@ -7,14 +7,16 @@ use std::fs::File;
 use inotify::WatchDescriptor;
 use serde_json::Value;
 
-fn bootstrap() { //not implemented yet
-
-}
-
 pub fn read_file(filename: &str) -> Result<String, io::Error> {
 
     let mut contents = String::new();
-    File::open(filename)?.read_to_string(&mut contents)?;
+    file = File::open(filename)?.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
+pub fn write_file(filename: &str, data: &str) -> Result<String, io::Error> {
+
+    File::open(filename).write_all(data)?;
     Ok(contents)
 }
 
