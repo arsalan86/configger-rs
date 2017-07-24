@@ -81,7 +81,8 @@ impl Watcher{
 
         for file in &self.filelist {
 
-            let thisfile_path = String::from(&file.filepath[..]); //hideous
+            //let thisfile_path = String::from(&file.filepath[..]); //hideous
+            let thisfile_path = String::from(file.filepath);
             let this_wd = self.notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE).unwrap();
             let this_watch = Watchlist {configfile: thisfile_path, watchd: this_wd};
             watches.push(this_watch);
