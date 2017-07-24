@@ -13,18 +13,8 @@ extern crate serde_derive;
 //imports
 use core::{
     read_file,
-    write_file,
-    ConfigFile,
-    Watchlist,
 };
-use inotify::{
-    event_mask,
-    watch_mask,
-    Inotify,
-};
-use serde_json::{Value, Error};
-use std::path::Path;
-use std::collections::HashMap;
+use core::tracker::Watcher;
 use std::io;
 //use std::result;
 
@@ -59,15 +49,10 @@ fn main() {
 
     let settings = SettingsData::from_file(SETTINGS).unwrap();
 
-    let watchlist = Watchlist::initialize(&settings.database)
+    let watcher = Watcher::new(&settings.database)
         .expect("Error creating watchlist struct");
-
-    
-
     /*
-    let cfgfiles: Vec<ConfigFile> = serde_json::from_str(&watchlist.data)
-        .expect("Error de-serializing configuration files data.");
-    
+   
     let cfgfiles_iterator = cfgfiles.iter();
     
     let mut inotifier = Inotify::init()

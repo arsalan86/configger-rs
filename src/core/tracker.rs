@@ -39,22 +39,22 @@ impl ConfigFile {
 
 }
 
-struct Watcher {
-    configfile: ConfigFile,
+struct Watchlist {
+    configfile: String,
     watchd: WatchDescriptor,
 }
 
-pub struct Watchlist {
+pub struct Watcher {
     json_file: String,
     json: String,
     filelist: Vec<ConfigFile>,
     notifier: Inotify,
-    watcher: Option<Vec<Watcher>>,
+    watchlist: Option<Vec<Watchlist>>,
 
 }
 
-impl Watchlist {
-    pub fn new(json_file: &str) -> Result<Watchlist, io::Error> {
+impl Watcher{
+    pub fn new(json_file: &str) -> Result<Watcher, io::Error> {
         
         let json: String = read_file(&json_file)?;
 
@@ -62,26 +62,32 @@ impl Watchlist {
         
         let mut notifier = Inotify::init()?;
 
-        // let mut watches = HashMap::new();
-
-        // for file in filelist_i.iter() {
-        //     watches.insert(file, notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE)?);
-        // }
-
-        let wl = Watchlist {
+        let mut wl = Watcher {
             json_file: String::from(json_file),
             json,
             filelist,
             notifier,
-            watcher: None,
+            watchlist: None,
         };
+
+        wl.init();
 
         Ok(wl)
     }
 
-    pub fn init(&self) {
+    fn init(&mut self) {
         
-        //et watchers 
+        let mut watches: Vec<Watchlist> = Vec::new();
+
+        for file in &self.filelist {
+
+            let thisfile_path = String::from(&file.filepath[..]); //hideous
+            let this_wd = self.notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE).unwrap();
+            let this_watch = Watchlist {configfile: thisfile_path, watchd: this_wd};
+            watches.push(this_watch);
+        }
+
+        self.watchlist = Some(watches);
     }
     //pub fn read_data(&self) {
 
