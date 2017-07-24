@@ -13,8 +13,9 @@ extern crate serde_derive;
 //imports
 use core::{
     read_file,
+    write_file,
     ConfigFile,
-    Database,
+    Watchlist,
 };
 use inotify::{
     event_mask,
@@ -28,7 +29,9 @@ use std::io;
 //use std::result;
 
 //consts
-const SETTINGS : &str = "/var/lib/configger/settings.json"; //hardcoded?
+//const SETTINGS : &str = "/var/lib/configger/settings.json"; //hardcoded?
+const SETTINGS : &str = "/home/arsalan/codes/configger-rs/settings.json"; //use-local
+
 
 mod core;
 
@@ -56,10 +59,13 @@ fn main() {
 
     let settings = SettingsData::from_file(SETTINGS).unwrap();
 
-    let database = Database::initialize(&settings.database)
-        .expect("Error creating database struct");
+    let watchlist = Watchlist::initialize(&settings.database)
+        .expect("Error creating watchlist struct");
 
-    let cfgfiles: Vec<ConfigFile> = serde_json::from_str(&database.data)
+    
+
+    /*
+    let cfgfiles: Vec<ConfigFile> = serde_json::from_str(&watchlist.data)
         .expect("Error de-serializing configuration files data.");
     
     let cfgfiles_iterator = cfgfiles.iter();
@@ -81,18 +87,24 @@ fn main() {
 
     let mut buffer = [0u8; 4096];
 
-    loop {
-        let events = inotifier.read_events_blocking(&mut buffer)
-            .expect("Failed to read events.");
+    //loop {
+    //    let events = inotifier.read_events_blocking(&mut buffer)
+    //        .expect("Failed to read events.");
 
-            for event in events {
-                println!("{:?}", event);
-            }
-    }
+    //        for event in events {
+    //            println!("{:?}", event);
+    //        }
+    //}
 
-    //let j = serde_json::to_string(&cfgfiles)
-    //    .expect("Failed to serialize j");
+    let j = serde_json::to_string(&cfgfiles)
+        .expect("Failed to serialize j");
 
+    if write_file("/home/arsalan/codes/configger-rs/db.json", &j)
+        .expect("Error writing db file")
+         {
+
+         }
+*/
     //ser-de works for us rn
 
     //inotify works TODO: change MODIFY to WRITE_CLOSE or equiv
