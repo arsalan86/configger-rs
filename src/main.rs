@@ -9,6 +9,7 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
+extern crate blake2;
 
 //imports
 use core::{
@@ -53,19 +54,6 @@ fn main() {
         .expect("Error creating watchlist struct");
     /*
    
-    let cfgfiles_iterator = cfgfiles.iter();
-    
-    let mut inotifier = Inotify::init()
-        .expect("Failed to init inotify.");
-
-    let mut watches = HashMap::new();
-
-    for file in cfgfiles_iterator {
-
-        watches.insert(&file.filepath, inotifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE)
-            .expect("Failed to add watch."));
-    }
-
     //for (filepath, watch) in watches {
     //    inotifier.rm_watch(watch);
     //}
