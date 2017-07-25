@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["arsalan86 <public@arsalanpirzada.com>"]
 
 [dependencies]
-inotify = "0.4"
+#inotify = "0.4"
+inotify = { git = "https://github.com/arsalan86/inotify-rs.git" }
 serde_json = "1.0"
 serde_derive = "1.0.10"
 serde = "1.0.10"
