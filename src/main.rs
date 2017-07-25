@@ -54,22 +54,5 @@ fn main() {
     let mut watcher = Watcher::new(&settings.database)
         .expect("Error creating watchlist struct");
 
-    watcher.start();
-    /*
-   
-    for (filepath, watch) in watches {
-       inotifier.rm_watch(watch);
-    }
-
-    let j = serde_json::to_string(&cfgfiles)
-        .expect("Failed to serialize j");
-
-    if write_file("/home/arsalan/codes/configger-rs/db.json", &j)
-        .expect("Error writing db file")
-         {
-
-         }
-*/
-    //ser-de works for us rn
-    
+    watcher.get_events();   
 }

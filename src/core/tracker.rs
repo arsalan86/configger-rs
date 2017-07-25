@@ -54,12 +54,6 @@ impl ConfigFile {
 
 }
 
-// struct Watchlist {
-//     configfile: String,
-//     watchd: WatchDescriptor,
-
-// }
-
 pub struct Watcher {
     json_file: String,
     json: String,
@@ -96,8 +90,6 @@ impl Watcher{
             watchlist,
         };
 
-        // wl.init();
-
         Ok(wl)
     }
 
@@ -115,21 +107,15 @@ impl Watcher{
         //write the json vector to disk as a json file
     }
 
-    pub fn start(&mut self) {
+    pub fn get_events(&mut self) {
         //needs to run in a thread?
         let mut buffer = [0u8; 4096];
 
-        loop {
             let events = self.notifier.read_events_blocking(&mut buffer)
                 .expect("Failed to read events.");
 
             for event in events {
                 println!("{:?}", event);
             }
-        }
-    }
-
-    pub fn stop(&self) {
-        //stop the tracker thread
     }
 }
