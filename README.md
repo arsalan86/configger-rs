@@ -1,4 +1,4 @@
-# configger
+# configger [![Build Status](https://travis-ci.org/arsalan86/configger-rs.svg?branch=master)](https://travis-ci.org/arsalan86/configger-rs)
 
 configger wants to be a scalable, versatile and light weight configuration file manager for linux, written in rust
 
