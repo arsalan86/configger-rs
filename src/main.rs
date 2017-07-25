@@ -48,26 +48,18 @@ fn main() {
 
     //begin bootstrap
 
-    let settings = SettingsData::from_file(SETTINGS).unwrap();
+    let settings = SettingsData::from_file(SETTINGS)
+        .expect("Couldn't get settings data from file.");
 
-    let watcher = Watcher::new(&settings.database)
+    let mut watcher = Watcher::new(&settings.database)
         .expect("Error creating watchlist struct");
+
+    watcher.start();
     /*
    
-    //for (filepath, watch) in watches {
-    //    inotifier.rm_watch(watch);
-    //}
-
-    let mut buffer = [0u8; 4096];
-
-    //loop {
-    //    let events = inotifier.read_events_blocking(&mut buffer)
-    //        .expect("Failed to read events.");
-
-    //        for event in events {
-    //            println!("{:?}", event);
-    //        }
-    //}
+    for (filepath, watch) in watches {
+       inotifier.rm_watch(watch);
+    }
 
     let j = serde_json::to_string(&cfgfiles)
         .expect("Failed to serialize j");
@@ -79,9 +71,5 @@ fn main() {
          }
 */
     //ser-de works for us rn
-
-    //inotify works TODO: change MODIFY to WRITE_CLOSE or equiv
-
-
     
 }

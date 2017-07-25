@@ -20,6 +20,7 @@ pub struct ConfigFile {
     pub filepath: String,
     pub blake2hash: String,
     pub comment: String,
+
 }
 
 impl ConfigFile {
@@ -37,29 +38,35 @@ impl ConfigFile {
     }
 
     pub fn check_hash(&self, hash: String) -> bool {
-       let oldhash = &self.blake2hash;
-       let newhash = self.get_hash().unwrap();
-       oldhash == &newhash
+
+        let oldhash = &self.blake2hash;
+
+        let newhash = self.get_hash().unwrap();
+
+        oldhash == &newhash
     }
 
     pub fn get_contents(&self) -> String {
+
         read_file(&self.filepath).unwrap()
 
     }
 
 }
 
-struct Watchlist {
-    configfile: String,
-    watchd: WatchDescriptor,
-}
+// struct Watchlist {
+//     configfile: String,
+//     watchd: WatchDescriptor,
+
+// }
 
 pub struct Watcher {
     json_file: String,
     json: String,
     filelist: Vec<ConfigFile>,
     notifier: Inotify,
-    watchlist: Option<Vec<Watchlist>>,
+    // watchlist: Option<Vec<Watchlist>>,
+    watchlist: HashMap<String, WatchDescriptor>,
 
 }
 
@@ -73,33 +80,25 @@ impl Watcher{
         
         let mut notifier = Inotify::init()?;
 
+        let mut watchlist = HashMap::new();
+
+        for file in &filelist {
+            let this_filepath = file.filepath.clone();
+            let this_wd = notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE).unwrap();
+            watchlist.insert(this_filepath, this_wd);
+        }
+
         let mut wl = Watcher {
             json_file: String::from(json_file),
             json,
             filelist,
             notifier,
-            watchlist: None,
+            watchlist,
         };
 
-        wl.init();
+        // wl.init();
 
         Ok(wl)
-    }
-
-    fn init(&mut self) {
-        
-        let mut watches: Vec<Watchlist> = Vec::new();
-
-        for file in &self.filelist {
-
-            let thisfile_path = file.filepath.clone();
-            let this_wd = self.notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE).unwrap();
-            let this_watch = Watchlist {configfile: thisfile_path, watchd: this_wd};
-            file.get_hash();
-            watches.push(this_watch);
-        }
-
-        self.watchlist = Some(watches);
     }
 
     pub fn add_file(&self, filepath: &str) {
@@ -116,8 +115,18 @@ impl Watcher{
         //write the json vector to disk as a json file
     }
 
-    pub fn start(&self) {
-        //start the tracker thread
+    pub fn start(&mut self) {
+        //needs to run in a thread?
+        let mut buffer = [0u8; 4096];
+
+        loop {
+            let events = self.notifier.read_events_blocking(&mut buffer)
+                .expect("Failed to read events.");
+
+            for event in events {
+                println!("{:?}", event);
+            }
+        }
     }
 
     pub fn stop(&self) {
