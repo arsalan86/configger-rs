@@ -23,26 +23,29 @@ pub struct ConfigFile {
 }
 
 impl ConfigFile {
-    pub fn get_hash(&self) {
-        let data = read_file(&self.filepath).unwrap();
+    pub fn get_hash(&self) -> Result<String, io::Error> {
+
+        let data = read_file(&self.filepath)?;
+
         let mut hasher = Blake2b::default();
+
         hasher.input(&data.into_bytes());
-        let output = hasher.result();
-        println!("{:x}", output);
+
+        let output = String::from(format!("{:x}", hasher.result()));
+
+        Ok(output)
     }
 
-    // pub fn check_hash(&self, hash: String) -> bool {
-    //    true
-    // }
+    pub fn check_hash(&self, hash: String) -> bool {
+       let oldhash = &self.blake2hash;
+       let newhash = self.get_hash().unwrap();
+       oldhash == &newhash
+    }
 
-    //pub fn get_contents(&self) -> String {
-    //    let s: String = "Nothing here yet".to_string();
-    //    s
-    //}
+    pub fn get_contents(&self) -> String {
+        read_file(&self.filepath).unwrap()
 
-    //pub fn event_trigger(&self) {
-    //    ()
-    //}
+    }
 
 }
 
