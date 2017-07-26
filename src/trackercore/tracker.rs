@@ -3,7 +3,7 @@ extern crate serde_json;
 extern crate blake2;
 
 use std::io;
-use core::read_file;
+use trackercore::read_file;
 use inotify::{
     event_mask,
     watch_mask,
@@ -12,8 +12,9 @@ use inotify::{
 };
 use std::collections::HashMap;
 use std::path::Path;
-use std::thread;
+use std::env;
 use blake2::{Blake2b, Digest};
+
 
 #[derive(Serialize, Deserialize)]
 pub struct ConfigFile {
@@ -59,8 +60,7 @@ pub struct Watcher {
     json: String,
     filelist: Vec<ConfigFile>,
     notifier: Inotify,
-    // watchlist: Option<Vec<Watchlist>>,
-    watchlist: HashMap<String, WatchDescriptor>,
+    watchlist: HashMap<WatchDescriptor,String>,
 
 }
 
@@ -78,8 +78,8 @@ impl Watcher{
 
         for file in &filelist {
             let this_filepath = file.filepath.clone();
-            let this_wd = notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE).unwrap();
-            watchlist.insert(this_filepath, this_wd);
+            let this_wd = notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE,).unwrap();
+            watchlist.insert(this_wd, this_filepath);
         }
 
         let mut wl = Watcher {
@@ -111,11 +111,14 @@ impl Watcher{
         //needs to run in a thread?
         let mut buffer = [0u8; 4096];
 
-            let events = self.notifier.read_events_blocking(&mut buffer)
-                .expect("Failed to read events.");
+        let events = self.notifier.read_events_blocking(&mut buffer)
+            .expect("Failed to read events.");
 
-            for event in events {
-                println!("{:?}", event);
+        for event in events {
+            match self.watchlist.get(&event.wd) {
+                Some(x) => println!("{}", x),
+                None => println!("None"),
             }
+        }
     }
 }

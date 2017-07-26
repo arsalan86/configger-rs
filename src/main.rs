@@ -12,19 +12,21 @@ extern crate serde_derive;
 extern crate blake2;
 
 //imports
-use core::{
+use trackercore::{
     read_file,
 };
-use core::tracker::Watcher;
+use trackercore::tracker::Watcher;
 use std::io;
 //use std::result;
+use std::thread;
+use std::sync::mpsc;
 
 //consts
 //const SETTINGS : &str = "/var/lib/configger/settings.json"; //hardcoded?
 const SETTINGS : &str = "/home/arsalan/codes/configger-rs/settings.json"; //use-local
 
 
-mod core;
+mod trackercore;
 
 #[derive(Serialize, Deserialize)]
 struct SettingsData {
@@ -54,5 +56,11 @@ fn main() {
     let mut watcher = Watcher::new(&settings.database)
         .expect("Error creating watchlist struct");
 
-    watcher.get_events();   
+    //let (tx, rx) = mpsc::channel();
+
+    //thread::spawn(move || {
+
+        let xx = watcher.get_events();
+
+    //});
 }
