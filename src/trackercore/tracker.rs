@@ -4,6 +4,7 @@ extern crate blake2;
 
 use std::io;
 use trackercore::read_file;
+use trackercore::write_file;
 use inotify::{
     event_mask,
     watch_mask,
@@ -25,7 +26,7 @@ pub struct ConfigFile {
 }
 
 impl ConfigFile {
-    pub fn get_hash(&self) -> Result<String, io::Error> {
+    pub fn get_hash(&mut self) -> Result<String, io::Error> {
 
         let data = read_file(&self.filepath)?;
 
@@ -38,13 +39,13 @@ impl ConfigFile {
         Ok(output)
     }
 
-    pub fn check_hash(&self, hash: String) -> bool {
+    pub fn check_hash_changed(&mut self) -> bool {
 
-        let oldhash = &self.blake2hash;
+        let oldhash = self.blake2hash.clone();
 
-        let newhash = self.get_hash().unwrap();
+        self.blake2hash = self.get_hash().unwrap();
 
-        oldhash == &newhash
+        oldhash != self.blake2hash
     }
 
     pub fn get_contents(&self) -> String {
@@ -76,6 +77,7 @@ impl Watcher{
 
         let mut watchlist = HashMap::new();
 
+
         for file in &filelist {
             let this_filepath = file.filepath.clone();
             let this_wd = notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE,).unwrap();
@@ -89,6 +91,18 @@ impl Watcher{
             notifier,
             watchlist,
         };
+
+        // let mut changed_flag = false;
+
+        // for file in wl.filelist {
+        //     if file.check_hash_changed() {
+        //         changed_flag = true;
+        //     }
+        // }
+
+        // if changed_flag {
+        //     wl.write_data();
+        // }
 
         Ok(wl)
     }
@@ -104,7 +118,9 @@ impl Watcher{
     }
 
     pub fn write_data(&self) {
-        //write the json vector to disk as a json file
+        let j = serde_json::to_string(&self.filelist)
+            .expect("Failed to serialize j");
+        write_file(&self.json_file, &j);
     }
 
     pub fn get_events(&mut self) {
