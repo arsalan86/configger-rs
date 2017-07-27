@@ -1,7 +1,3 @@
-extern crate inotify;
-extern crate serde_json;
-extern crate blake2;
-
 use std::io;
 use trackercore::read_file;
 use trackercore::write_file;
@@ -15,7 +11,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::env;
 use blake2::{Blake2b, Digest};
-
+use serde_json;
 
 #[derive(Serialize, Deserialize)]
 pub struct ConfigFile {
@@ -76,7 +72,6 @@ impl Watcher{
         let mut notifier = Inotify::init()?;
 
         let mut watchlist = HashMap::new();
-
 
         for file in &filelist {
             let this_filepath = file.filepath.clone();

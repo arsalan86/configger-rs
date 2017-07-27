@@ -1,6 +1,3 @@
-extern crate inotify;
-extern crate serde_json;
-
 use std::io;
 use std::io::prelude::*;
 use std::fs::File;
@@ -13,7 +10,7 @@ pub fn read_file(filename: &str) -> Result<String, io::Error> {
     let mut contents = String::new();
     File::open(filename)?.read_to_string(&mut contents)?;
     Ok(contents)
-    //helpful reminder to check for permissions if read fails
+    //TODO helpful reminder to check for permissions if read fails
 }
 
 pub fn write_file(filename: &str, data: &str) -> Result<bool, io::Error> {

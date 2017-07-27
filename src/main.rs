@@ -26,7 +26,6 @@ use std::sync::mpsc;
 //const SETTINGS : &str = "/var/lib/configger/settings.json"; //hardcoded?
 const SETTINGS : &str = "/home/arsalan/codes/configger-rs/settings.json"; //use-local
 
-
 mod trackercore;
 
 #[derive(Serialize, Deserialize)]
@@ -49,8 +48,6 @@ impl SettingsData  {
 
 fn main() {
 
-    //begin bootstrap
-
     let settings = SettingsData::from_file(SETTINGS)
         .expect("Couldn't get settings data from file.");
 
@@ -62,6 +59,7 @@ fn main() {
     //thread::spawn(move || {
 
         let xx = watcher.get_events();
+        println!("{:?}", xx);
 
     //});
 }
