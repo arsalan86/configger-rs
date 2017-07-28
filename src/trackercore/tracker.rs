@@ -1,161 +1,153 @@
 use std::io;
-use trackercore::{
-    read_file,
-    write_file
-};
-use inotify::{
-    event_mask,
-    watch_mask,
-    Inotify,
-    WatchDescriptor,
-};
+use trackercore::{read_file, write_file};
+use inotify::{event_mask, watch_mask, Inotify, WatchDescriptor};
 use std::collections::HashMap;
 use std::path::Path;
 use std::env;
 use blake2::{Blake2b, Digest};
 use serde_json;
 
-#[derive(Serialize, Deserialize)]
-pub struct ConfigFile {
-    pub filepath: String,
-    pub blake2hash: String,
-    pub comment: String,
-
+#[derive(Serialize, Deserialize, Debug)]
+struct ConfigFile {
+    filepath: String,
+    blake2hash: String,
+    comment: String,
 }
 
 impl ConfigFile {
-    pub fn get_hash(&mut self) -> Result<String, io::Error> {
+    fn update_hash(&mut self) -> Result<bool, io::Error> {
 
-        let data = read_file(&self.filepath)?;
-
+        let file_data = read_file(&self.filepath)?;
         let mut hasher = Blake2b::default();
-
-        hasher.input(&data.into_bytes());
-
-        let output = String::from(format!("{:x}", hasher.result()));
-
-        Ok(output)
-    }
-
-    pub fn check_hash_changed(&mut self) -> bool {
-
+        hasher.input(&file_data.into_bytes());
+        let newhash = String::from(format!("{:x}", hasher.result()));
         let oldhash = self.blake2hash.clone();
-
-        self.blake2hash = self.get_hash().unwrap();
-
-        oldhash != self.blake2hash
+        self.blake2hash = newhash;
+        Ok(oldhash != self.blake2hash) //return true if changed
     }
 
-    pub fn get_contents(&self) -> String {
+    fn get_contents(&self) -> String {
 
         read_file(&self.filepath).unwrap()
-
     }
 
-}
-
-// Watcher<watchmanager> should be simple interface between inotify and everything else.
-// It should basically accept filenames to add/drop files to the inotify watcher,
-// and start/stop the watcher event loop.
-
-pub struct WatchManager {
-    notifier: Inotify,
-}
-
-impl WatchManager {
-    pub fn new() -> Result<WatchManager, io::Error> {
-
-        let mut notifier = Inotify::init()?;
-
-        let mut wm = WatchManager {
-            notifier,
-        };
-
-        Ok(wm)
-    }
-
-    pub fn add_watch(&mut self, filename: &str) -> Result<WatchDescriptor, io::Error> {
-        Ok(self.notifier.add_watch(Path::new(filename), watch_mask::CLOSE_WRITE,)?)
-    }
-    pub fn drop_watch(&mut self, wd: WatchDescriptor) {
-        self.notifier.rm_watch(wd);
+    fn touch(&self) {
+        println!("{} touched", self.filepath);
+        //backup and update hash
     }
 }
 
-pub struct Watcher {
-    json_file: String, //Watchmanager does not need to deal with jsons or data
-    json: String, // ditto
-    filelist: Vec<ConfigFile>, //nope, it needs to be passed files using an add_watch(method)
-    notifier: Inotify,
-    watchlist: HashMap<WatchDescriptor,String>, //this can be simplified
-
+#[derive(Debug)]
+pub struct Watchlist {
+    database: String,
+    filelist: HashMap<String, ConfigFile>,
+    watches: HashMap<WatchDescriptor, String>,
 }
 
-impl Watcher{
+impl Watchlist {
+    pub fn new(database: &str, dataset: &str) -> Result<Watchlist, io::Error> {
 
-    pub fn new(json_file: &str) -> Result<Watcher, io::Error> {
-        
-        let json: String = read_file(&json_file)?;
-        let filelist: Vec<ConfigFile> = serde_json::from_str(&json)?;
-        let mut notifier = Inotify::init()?;
-        let mut watchlist = HashMap::new();
-        for file in &filelist {
-            let this_filepath = file.filepath.clone();
-            let this_wd = notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE,).unwrap();
-            watchlist.insert(this_wd, this_filepath);
+        let files: Vec<ConfigFile> = serde_json::from_str(&dataset)?;
+        let mut filelist = HashMap::new();
+        let mut file_changed_flag = false;
+        for mut file in files {
+            if file.update_hash().expect("failed to update hash") {
+                // make a backup here
+                file_changed_flag = true;
+            }
+            filelist.insert(file.filepath.clone(), file);
         }
-
-        let mut wl = Watcher {
-            json_file: String::from(json_file),
-            json,
+        let watches = HashMap::new();
+        let mut wl = Watchlist {
+            database: String::from(database),
             filelist,
-            notifier,
-            watchlist,
+            watches,
         };
-
-        // let mut changed_flag = false;
-
-        // for file in wl.filelist {
-        //     if file.check_hash_changed() {
-        //         changed_flag = true;
-        //     }
-        // }
-
-        // if changed_flag {
-        //     wl.write_data();
-        // }
-
+        if file_changed_flag {
+            wl.write_data();
+        }
         Ok(wl)
     }
 
-    pub fn add_file(&self, filepath: &str) {
-        //check whether file already exists in db, if not, add and then write db to file
-        //add a watcher/inotifier for file
+    fn add_file(&mut self) {}
+
+    fn drop_file(&mut self) {}
+
+    fn write_data(&self) {
+
+        let mut files = Vec::new();
+
+        for (filepath, file) in self.filelist.iter() {
+            files.push(file);
+        }
+
+        let j = serde_json::to_string(&files).expect("Failed to serialize j");
+
+        write_file(&self.database, &j);
+    }
+}
+
+pub struct WatchManager {
+    notifier: Inotify,
+    watchlist: Watchlist,
+}
+
+impl WatchManager {
+    pub fn new(watchlist: Watchlist) -> Result<WatchManager, io::Error> {
+
+        let mut notifier = Inotify::init()?;
+        let mut wm = WatchManager {
+            notifier,
+            watchlist,
+        };
+        Ok(wm)
     }
 
-    pub fn drop_file(&self, filepath: &str) {
-        //check if a file exists in db, and then delete that record
-        //remove watcher/inotifier for file
+    pub fn initialize(&mut self) {
+
+        self.start();
     }
 
-    pub fn write_data(&self) {
-        let j = serde_json::to_string(&self.filelist)
-            .expect("Failed to serialize j");
-        write_file(&self.json_file, &j);
+    pub fn add_watch(&mut self, filename: &str) -> Result<WatchDescriptor, io::Error> {
+
+        Ok(self.notifier.add_watch(
+            Path::new(filename),
+            watch_mask::CLOSE_WRITE,
+        )?)
     }
 
-    pub fn get_events(&mut self) {
+    pub fn drop_watch(&mut self, wd: WatchDescriptor) {
+
+        self.notifier.rm_watch(wd);
+    }
+
+    pub fn start(&mut self) {
+
+        let mut filepaths: Vec<String> = Vec::new();
+        for (filepath, file) in &self.watchlist.filelist {
+            filepaths.push(filepath.clone());
+        }
+        for filepath in filepaths {
+            let wd = self.add_watch(&filepath).unwrap();
+            self.watchlist.watches.insert(wd, filepath.clone());
+        }
         //needs to run in a thread?
         let mut buffer = [0u8; 4096];
-
-        let events = self.notifier.read_events_blocking(&mut buffer)
-            .expect("Failed to read events.");
-
+        let events = self.notifier.read_events_blocking(&mut buffer).expect(
+            "Failed to read events.",
+        );
+        let mut eventpaths: Vec<String> = Vec::new();
         for event in events {
-            match self.watchlist.get(&event.wd) {
-                Some(x) => println!("{}", x),
+            match self.watchlist.watches.get(&event.wd) {
+                Some(filepath) => eventpaths.push(filepath.clone()), //need to map to touched event and update db
                 None => println!("None"),
             }
         }
+        println!("{:#?}", eventpaths);
+        for filepath in eventpaths {
+            self.watchlist.filelist.get(&filepath).unwrap().touch();
+        }
     }
+
+    pub fn stop(&self) {}
 }

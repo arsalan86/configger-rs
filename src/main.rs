@@ -14,14 +14,14 @@ extern crate blake2;
 
 //imports
 use trackercore::read_file;
-use trackercore::tracker::Watcher;
+use trackercore::tracker::Watchlist;
 use trackercore::tracker::WatchManager;
 use std::io;
 use std::thread;
 use std::sync::mpsc;
 
 //consts
-const SETTINGS : &str = "settings.json";
+const SETTINGS: &str = "settings.json";
 
 mod trackercore;
 
@@ -30,35 +30,23 @@ struct SettingsData {
     database: String,
 }
 
-impl SettingsData  {
-    fn from_file(filename: &str) -> Result<SettingsData, io::Error> {
-        
-        let settings_file: String = read_file(filename)?;
+fn init() -> Result<SettingsData, io::Error> {
+    let settings_file: String = read_file(SETTINGS)?;
 
-        let settings: SettingsData = serde_json::from_str(&settings_file)?;
+    let settings: SettingsData = serde_json::from_str(&settings_file)?;
 
-        Ok(settings)
-
-    }
+    Ok(settings)
 }
 
 fn main() {
 
-    let settings = SettingsData::from_file(SETTINGS)
-        .expect("Couldn't get settings data from file.");
+    let settings = init().expect("Couldn't get settings data from file.");
 
-    let mut watcher = Watcher::new(&settings.database)
-        .expect("Error creating watchlist struct");
+    let db: String = read_file(&settings.database).expect("Couldn't get watchlist from file."); //maybe move this into watcher?
+    
+    let mut watchlist = Watchlist::new(&settings.database, &db).expect("Error building watchlist");
 
-    let mut watchmanager = WatchManager::new()
-        .expect("Failed to init watchmanager");
+    let mut watchmanager = WatchManager::new(watchlist).expect("Failed to init watchmanager");
 
-    //let (tx, rx) = mpsc::channel();
-
-    //thread::spawn(move || {
-
-        let xx = watcher.get_events();
-        println!("{:?}", xx);
-
-    //});
+    watchmanager.initialize();
 }
