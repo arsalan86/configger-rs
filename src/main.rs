@@ -13,24 +13,20 @@ extern crate serde_derive;
 extern crate blake2;
 
 //imports
-use trackercore::{
-    read_file,
-};
+use trackercore::read_file;
 use trackercore::tracker::Watcher;
+use trackercore::tracker::WatchManager;
 use std::io;
-//use std::result;
 use std::thread;
 use std::sync::mpsc;
 
 //consts
-//const SETTINGS : &str = "/var/lib/configger/settings.json"; //hardcoded?
-const SETTINGS : &str = "/home/arsalan/codes/configger-rs/settings.json"; //use-local
+const SETTINGS : &str = "settings.json";
 
 mod trackercore;
 
 #[derive(Serialize, Deserialize)]
 struct SettingsData {
-    version: String,
     database: String,
 }
 
@@ -53,6 +49,9 @@ fn main() {
 
     let mut watcher = Watcher::new(&settings.database)
         .expect("Error creating watchlist struct");
+
+    let mut watchmanager = WatchManager::new()
+        .expect("Failed to init watchmanager");
 
     //let (tx, rx) = mpsc::channel();
 

@@ -1,6 +1,8 @@
 use std::io;
-use trackercore::read_file;
-use trackercore::write_file;
+use trackercore::{
+    read_file,
+    write_file
+};
 use inotify::{
     event_mask,
     watch_mask,
@@ -52,12 +54,40 @@ impl ConfigFile {
 
 }
 
-pub struct Watcher {
-    json_file: String,
-    json: String,
-    filelist: Vec<ConfigFile>,
+// Watcher<watchmanager> should be simple interface between inotify and everything else.
+// It should basically accept filenames to add/drop files to the inotify watcher,
+// and start/stop the watcher event loop.
+
+pub struct WatchManager {
     notifier: Inotify,
-    watchlist: HashMap<WatchDescriptor,String>,
+}
+
+impl WatchManager {
+    pub fn new() -> Result<WatchManager, io::Error> {
+
+        let mut notifier = Inotify::init()?;
+
+        let mut wm = WatchManager {
+            notifier,
+        };
+
+        Ok(wm)
+    }
+
+    pub fn add_watch(&mut self, filename: &str) -> Result<WatchDescriptor, io::Error> {
+        Ok(self.notifier.add_watch(Path::new(filename), watch_mask::CLOSE_WRITE,)?)
+    }
+    pub fn drop_watch(&mut self, wd: WatchDescriptor) {
+        self.notifier.rm_watch(wd);
+    }
+}
+
+pub struct Watcher {
+    json_file: String, //Watchmanager does not need to deal with jsons or data
+    json: String, // ditto
+    filelist: Vec<ConfigFile>, //nope, it needs to be passed files using an add_watch(method)
+    notifier: Inotify,
+    watchlist: HashMap<WatchDescriptor,String>, //this can be simplified
 
 }
 
@@ -66,13 +96,9 @@ impl Watcher{
     pub fn new(json_file: &str) -> Result<Watcher, io::Error> {
         
         let json: String = read_file(&json_file)?;
-
         let filelist: Vec<ConfigFile> = serde_json::from_str(&json)?;
-        
         let mut notifier = Inotify::init()?;
-
         let mut watchlist = HashMap::new();
-
         for file in &filelist {
             let this_filepath = file.filepath.clone();
             let this_wd = notifier.add_watch(Path::new(&file.filepath), watch_mask::CLOSE_WRITE,).unwrap();
